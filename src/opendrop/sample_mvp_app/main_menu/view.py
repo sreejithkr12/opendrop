@@ -34,7 +34,7 @@ class MainView(GtkWindowView, IMainView):
         button3.event_name = 'on_camera_button_clicked'
         button4.event_name = 'on_about_button_clicked'
         entry.event_name = 'on_text_entered'
-        entry_button.event_name = "on_entry_button_clicked"
+        entry_button.event_name = 'on_entry_button_clicked'
 
         grid.attach(button1, 0, 0, 1, 1)
         grid.attach(button2, 0, 1, 1, 1)
@@ -60,7 +60,7 @@ class MainView(GtkWindowView, IMainView):
         )
 
         # -- Attach events --
-        for button in (button1, button2, button3, button4):
+        for button in (button1, button2, button3, button4, entry_button):
             button.connect('clicked', self.on_buttonx_clicked)
 
         # -- Keep these widgets accessible --

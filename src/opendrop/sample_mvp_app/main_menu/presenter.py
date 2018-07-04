@@ -33,7 +33,7 @@ class MainPresenter(Presenter[MainMenuModel, IMainView]):
         self.view.show_about_dialog()
 
     def handle_text_entered(self):
-        print("Text Entered")
+        print()
 
     def handle_entry_button_clicked(self):
-        print("Entry Button clicked")
+        print("hello")
