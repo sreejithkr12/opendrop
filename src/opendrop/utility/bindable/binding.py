@@ -12,6 +12,10 @@ DVT = TypeVar('DVT')
 # Binding
 
 class BindingMITM(Generic[STxT, DTxT]):
+    # Singleton that can be returned by to_dst() or to_src() to prevent a transaction from propogating to the other
+    # bindable.
+    BLOCK = object()
+
     # These methods should not modify `tx`, they should create new transactions since `tx` is reused for all connected
     # handlers to the `on_new_tx` event of a Bindable.
     def to_dst(self, tx: STxT) -> DTxT:
@@ -67,6 +71,9 @@ class Binding(Generic[STxT, DTxT]):
 
         tx = self._transform_tx(tx, target)
 
+        if tx is BindingMITM.BLOCK:
+            return
+
         target._apply_tx(tx, block=(block_conn,))
 
     @overload
@@ -111,11 +118,21 @@ class AtomicBindingMITM(Generic[SVT, DVT], BindingMITM[AtomicBindableTx[SVT], At
             self._atomic_to_src = to_src
 
     def to_dst(self, tx: AtomicBindableTx[SVT]) -> AtomicBindableTx[DVT]:
-        new_tx = AtomicBindable.create_tx(self._atomic_to_dst(tx.value))
+        transformed_value = self._atomic_to_dst(tx.value)
+
+        if transformed_value is self.BLOCK:
+            return self.BLOCK
+
+        new_tx = AtomicBindable.create_tx(transformed_value)
         return new_tx
 
     def to_src(self, tx: AtomicBindableTx[DVT]) -> AtomicBindableTx[SVT]:
-        new_tx = AtomicBindable.create_tx(self._atomic_to_src(tx.value))
+        transformed_value = self._atomic_to_src(tx.value)
+
+        if transformed_value is self.BLOCK:
+            return self.BLOCK
+
+        new_tx = AtomicBindable.create_tx(transformed_value)
         return new_tx
 
     def _atomic_to_dst(self, value: SVT) -> DVT:

@@ -264,6 +264,64 @@ def test_binding_with_mitm():
     ]
 
 
+def test_binding_mitm_block():
+    checkpoints = []
+
+    class MyBindable(Bindable[int]):
+        def __init__(self, name, initial):
+            super().__init__()
+            self.name = name
+            self.initial = initial
+
+        def _export(self):
+            checkpoints.append(
+                ('{.name}._export'.format(self),)
+            )
+            return self.initial
+
+        def _raw_apply_tx(self, tx):
+            checkpoints.append(
+                ('{.name}._apply_tx'.format(self), tx)
+            )
+
+        def alert(self, tx):
+            self._bcast_tx(tx)
+
+    class MyMITM(BindingMITM[int, int]):
+        def to_dst(self, tx: int) -> int:
+            checkpoints.append(('to_dst', tx))
+            return tx if tx < 100 else self.BLOCK
+
+        def to_src(self, tx: int) -> int:
+            checkpoints.append(('to_src', tx))
+            return tx * 2 if tx < 100 else self.BLOCK
+
+    bn0 = MyBindable(name='bn0', initial=100)
+    bn1 = MyBindable(name='bn1', initial=0)
+
+    binding = Binding(src=bn0, dst=bn1, mitm=MyMITM())
+
+    bn0.alert(101)
+    bn1.alert(15)
+    bn1.alert(102)
+
+    assert checkpoints == [
+        # Initialisation of binding01
+        ('bn0._export',),
+        ('to_dst', 100),
+
+        # bn0.alert(101)
+        ('to_dst', 101),
+
+        # bn1.alert(15)
+        ('to_src', 15),
+        ('bn0._apply_tx', 30),
+
+        # bn1.alert(102)
+        ('to_src', 102)
+    ]
+
+
 def test_atomic_binding_mitm_inheriting():
     checkpoints = []
 
@@ -363,4 +421,63 @@ def test_atomic_binding_mitm_functional_api():
         # bn1.set(15)
         ('bn1._raw_set', 15),
         ('bn0._raw_set', 30),
+    ]
+
+
+def test_atomic_binding_mitm_block():
+    checkpoints = []
+
+    class MyBindable(AtomicBindable[int]):
+        def __init__(self, name, initial):
+            super().__init__()
+            self.name = name
+            self.value = initial
+
+        def _raw_get(self):
+            checkpoints.append(
+                ('{.name}._raw_get'.format(self),)
+            )
+            return self.value
+
+        def _raw_set(self, value):
+            checkpoints.append(
+                ('{.name}._raw_set'.format(self), value)
+            )
+            self.value = value
+
+    class MyMITM(AtomicBindingMITM[int, int]):
+        def _atomic_to_dst(self, value: int) -> int:
+            checkpoints.append(('_atomic_to_dst', value))
+            return value if value < 100 else self.BLOCK
+
+        def _atomic_to_src(self, value: int) -> int:
+            checkpoints.append(('_atomic_to_src', value))
+            return value * 2 if value < 100 else self.BLOCK
+
+    bn0 = MyBindable(name='bn0', initial=100)
+    bn1 = MyBindable(name='bn1', initial=0)
+
+    binding = Binding(src=bn0, dst=bn1, mitm=MyMITM())
+
+    bn0.set(101)
+    bn1.set(15)
+    bn1.set(102)
+
+    assert checkpoints == [
+        # Initialisation of binding01
+        ('bn0._raw_get',),
+        ('_atomic_to_dst', 100),
+
+        # bn0.set(101)
+        ('bn0._raw_set', 101),
+        ('_atomic_to_dst', 101),
+
+        # bn1.set(15)
+        ('bn1._raw_set', 15),
+        ('_atomic_to_src', 15),
+        ('bn0._raw_set', 30),
+
+        # bn1.set(102)
+        ('bn1._raw_set', 102),
+        ('_atomic_to_src', 102)
     ]

@@ -1,3 +1,4 @@
+import functools
 from typing import List, Sequence, Optional
 
 import cv2
@@ -5,6 +6,7 @@ import numpy as np
 
 from opendrop.observer import types
 from opendrop.observer.bases import Observer, Observation, ObserverPreview, ObserverProvider, ObserverType
+from opendrop.utility.bindable.bindable import AtomicBindableAdapter, AtomicBindable
 
 
 def get_invalid_image_paths(image_paths: List[str]) -> Optional[str]:
@@ -78,20 +80,39 @@ class ImageSlideshowObserverPreview(ObserverPreview):
     def __init__(self, observer: ImageSlideshowObserver):
         super().__init__(observer)
 
-        self._index = 0
         self._observer = observer
+        self._show_index = 0
+
+        self.bn_show_index = AtomicBindableAdapter(
+            getter=self._get_show_index,
+            setter=self._set_show_index
+        )
+
+        self.bn_num_images = AtomicBindableAdapter(
+            getter=lambda: self._observer.num_images
+        )
 
     @property
     def buffer(self) -> np.ndarray:
-        return self._observer.get_image(self._index)
+        return self._observer.get_image(self._show_index)
 
-    @property
-    def num_images(self) -> int:
-        return self._observer.num_images
+    @AtomicBindable.property_adapter
+    def num_images(self) -> AtomicBindable[int]:
+        return self.bn_num_images
+
+    @AtomicBindable.property_adapter
+    def show_index(self) -> AtomicBindable[int]:
+        return self.bn_show_index
+
+    def _get_show_index(self) -> int:
+        return self._show_index
+
+    def _set_show_index(self, new_index: int) -> None:
+        self._show_index = new_index
+        self.on_changed.fire()
 
     def show(self, index: int):
-        self._index = index
-        self.on_changed.fire()
+        self.show_index = index
 
     def close(self):
         # No need to do any clean up

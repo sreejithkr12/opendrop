@@ -2,14 +2,10 @@
 # by possibly having to write a custom event loop class.
 
 import asyncio
-
 import functools
-
 from typing import Any
 
-import time
-from gi.repository import GObject
-
+from gi.repository import GLib
 
 STEP_SLEEP = 0.005
 
@@ -39,7 +35,7 @@ class WrappedLoopRunOnGLoopMethods:
             raise RuntimeError('This event loop is already running')
 
         self.alive = True
-        GObject.idle_add(self.step)
+        GLib.timeout_add(STEP_SLEEP*1000, self.step, priority=GLib.PRIORITY_DEFAULT_IDLE)
 
     def stop(self) -> None:
         self.alive = False
@@ -55,17 +51,15 @@ class WrappedLoopRunOnGLoopMethods:
             pass
 
         # Sleep for a bit so CPU usage isn't 100%
-        time.sleep(STEP_SLEEP)
+        # time.sleep(STEP_SLEEP)
 
-    def step(self) -> None:
+    def step(self) -> bool:
         if self.is_closed():
-            return
+            return False
 
         if self.alive:
-            self.call_soon(GObject.idle_add, self.step)
             self.run_once()
-        else:
-            self.target.stop()
+            return True
 
 
 class WrappedLoopRunOnGLoop(asyncio.AbstractEventLoop):

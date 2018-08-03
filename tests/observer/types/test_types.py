@@ -36,6 +36,6 @@ def test_types_count():
     assert(scraped_providers_count == observer_type_count)
 
 
-# Test that some observers are accessible from `observer.types`, to make sure it's kind of working.
+# Test that some observers are accessible from `imageacquisition.types`, to make sure it's kind of working.
 def test_can_access_some():
     assert observer.types.USB_CAMERA

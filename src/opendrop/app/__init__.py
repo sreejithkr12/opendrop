@@ -2,9 +2,9 @@ import sys
 
 import gi
 
-from opendrop.app.app import OpendropApplication
-
 gi.require_version('Gtk', '3.0')
+
+from opendrop.app.app import OpendropApplication
 
 
 def main() -> None:

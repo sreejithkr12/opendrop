@@ -1,0 +1,9 @@
+{
+  "camera_capture_history": {
+    "limit": 50,
+    "location": "/Users/Eugene/Documents/Opendrop Saves/Camera History",
+    "enabled": true
+  },
+  "default_drop_save_parent_directory": "/Users/Eugene/Documents/Opendrop Saves",
+  "gravity": 9.80035
+}
